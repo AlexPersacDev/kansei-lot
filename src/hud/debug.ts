@@ -7,7 +7,7 @@ export class DebugHud {
   private main: HTMLDivElement;
   private tele: HTMLPreElement;
   private acc = 0;
-  showTelemetry = true;
+  showTelemetry = false;
 
   constructor(parent: HTMLElement) {
     this.main = document.createElement('div');
@@ -47,7 +47,6 @@ export class DebugHud {
       `      load     κ     α°   slip\n` +
       ['FL', 'FR', 'RL', 'RR'].map((n, i) =>
         `${n} ${f(w[i].fz)} ${f(w[i].slipRatio, 2)} ${f(w[i].slipAngle * deg, 1)} ${f(w[i].slip, 1)}`).join('\n') +
-      `\naxle F ${f(w[0].fz + w[1].fz)}  R ${f(w[2].fz + w[3].fz)}\n` +
-      `WASD/flechas · espacio freno mano · Shift embrague\nE/Q marchas (pasa a manual) · M auto/manual\nC cámara · R recolocar · F3 telemetría`;
+      `\naxle F ${f(w[0].fz + w[1].fz)}  R ${f(w[2].fz + w[3].fz)}   (F3 oculta)`;
   }
 }

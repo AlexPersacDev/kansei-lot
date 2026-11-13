@@ -1,16 +1,23 @@
-import type { ButtonAction, InputDevice, InputFrame } from './actions';
+import type { ButtonAction, GlyphFamily, InputDevice, InputFrame } from './actions';
 
 const BUTTONS: Record<string, ButtonAction> = {
   KeyE: 'shiftUp', KeyQ: 'shiftDown', KeyC: 'camera', KeyR: 'reset', Escape: 'pause', KeyH: 'toggleHelp',
 };
 
-/** Keyboard (+ optional mouse steering). Digital keys are ramped so steering is not twitchy. */
+/**
+ * Keyboard, with optional mouse steering (horizontal pointer position steers, left button =
+ * throttle, right button = brake). Digital keys are ramped so steering is not twitchy.
+ */
 export class KeyboardDevice implements InputDevice {
   readonly kind = 'keyboard' as const;
+  get family(): GlyphFamily { return this.mouseSteer ? 'mouse' : 'keyboard'; }
+  mouseSteer = false;
   steerRise = 3.2;    // per second, toward full lock
   steerReturn = 5.0;  // per second, back to centre
   pedalRise = 7;
   pedalFall = 10;
+  /** Set false while a menu has focus so typing doesn't drive the car. */
+  enabled = true;
 
   private down = new Set<string>();
   private justDown: string[] = [];
@@ -18,22 +25,37 @@ export class KeyboardDevice implements InputDevice {
   private steer = 0;
   private throttle = 0;
   private brake = 0;
+  private mouseX = 0.5;
+  private mouseButtons = 0;
 
-  constructor(target: Window = window) {
-    target.addEventListener('keydown', (e) => {
-      if (e.repeat) return;
+  constructor(canvas: HTMLElement) {
+    window.addEventListener('keydown', (e) => {
+      if (e.repeat || (e.target as HTMLElement)?.tagName === 'INPUT') return;
       if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
       this.down.add(e.code);
       this.justDown.push(e.code);
       this.touched = true;
     });
-    target.addEventListener('keyup', (e) => { this.down.delete(e.code); });
-    target.addEventListener('blur', () => this.down.clear());
+    window.addEventListener('keyup', (e) => { this.down.delete(e.code); });
+    window.addEventListener('blur', () => { this.down.clear(); this.mouseButtons = 0; });
+    canvas.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      this.mouseX = e.clientX / window.innerWidth;
+      if (this.mouseSteer) this.touched = true;
+    });
+    canvas.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      this.mouseButtons = e.buttons;
+      if (this.mouseSteer) this.touched = true;
+    });
+    window.addEventListener('pointerup', (e) => { if (e.pointerType === 'mouse') this.mouseButtons = e.buttons; });
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
   private any(...codes: string[]): boolean { return codes.some((c) => this.down.has(c)); }
 
   poll(dt: number, out: InputFrame): boolean {
+    if (!this.enabled) { this.down.clear(); this.justDown.length = 0; this.mouseButtons = 0; }
     const left = this.any('KeyA', 'ArrowLeft');
     const right = this.any('KeyD', 'ArrowRight');
     const target = (right ? 1 : 0) - (left ? 1 : 0);
@@ -44,10 +66,18 @@ export class KeyboardDevice implements InputDevice {
     } else {
       this.steer = approach(this.steer, 0, this.steerReturn * dt);
     }
-    this.throttle = approach(this.throttle, this.any('KeyW', 'ArrowUp') ? 1 : 0, (this.any('KeyW', 'ArrowUp') ? this.pedalRise : this.pedalFall) * dt);
-    this.brake = approach(this.brake, this.any('KeyS', 'ArrowDown') ? 1 : 0, (this.any('KeyS', 'ArrowDown') ? this.pedalRise : this.pedalFall) * dt);
+    const gas = this.any('KeyW', 'ArrowUp') || (this.mouseSteer && (this.mouseButtons & 1) !== 0);
+    const brk = this.any('KeyS', 'ArrowDown') || (this.mouseSteer && (this.mouseButtons & 2) !== 0);
+    this.throttle = approach(this.throttle, gas ? 1 : 0, (gas ? this.pedalRise : this.pedalFall) * dt);
+    this.brake = approach(this.brake, brk ? 1 : 0, (brk ? this.pedalRise : this.pedalFall) * dt);
 
-    out.steer = this.steer;
+    if (this.mouseSteer && target === 0) {
+      // centre 70 % of the screen width spans full lock; outside clamps
+      out.steer = Math.max(-1, Math.min(1, (this.mouseX - 0.5) / 0.35));
+      this.steer = out.steer;
+    } else {
+      out.steer = this.steer;
+    }
     out.throttle = this.throttle;
     out.brake = this.brake;
     out.handbrake = this.any('Space') ? 1 : 0;
