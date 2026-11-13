@@ -114,7 +114,8 @@ export class PauseMenu {
       menu.appendChild(n);
     }
 
-    section('Pantalla');
+    section('Pantalla y sonido');
+    slider('Volumen', 0, 1, 0.05, () => s.volume, (v) => { s.volume = v; }, pct);
     check('Mostrar ayuda de controles', () => s.showHelp, (v) => { s.showHelp = v; });
     check('Telemetría de depuración', () => s.showTelemetry, (v) => { s.showTelemetry = v; });
 

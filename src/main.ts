@@ -13,6 +13,11 @@ import { openRemap } from './ui/remap';
 import { injectStyles, toast } from './ui/styles';
 import { FAMILY_TITLE } from './ui/glyphs';
 import { loadSettings, saveSettings, type Tuning } from './settings';
+import { DriftScoring } from './game/scoring';
+import { Hud } from './hud/hud';
+import { TireSmoke } from './render/smoke';
+import { SkidMarks } from './render/skids';
+import { CarAudio } from './audio/audio';
 
 await accessGate();
 injectStyles();
@@ -34,6 +39,17 @@ rig.snap(car);
 const input = new InputManager(world.renderer.domElement, settings);
 const hud = new DebugHud(document.body);
 const help = new HelpPanel(document.body);
+const scoring = new DriftScoring();
+const gameHud = new Hud(document.body, car, scoring);
+const smoke = new TireSmoke();
+const skids = new SkidMarks();
+world.scene.add(smoke.mesh, skids.mesh);
+const audio = new CarAudio();
+scoring.onEvent = (e) => {
+  gameHud.event(e);
+  const a = input.active;
+  if (e.kind === 'lost' && a instanceof PadDevice && settings.vibration) a.rumble(0.8, 0.4, 260);
+};
 
 const defaultTuning = (): Tuning => ({
   powerScale: E30.engine.powerScale,
@@ -70,6 +86,7 @@ function applySettings(): void {
   input.keyboard.mouseSteer = settings.mouseSteer;
   help.visible = settings.showHelp;
   hud.showTelemetry = settings.showTelemetry;
+  audio.setVolume(settings.volume);
   refreshHelp();
 }
 
@@ -158,7 +175,7 @@ world.renderer.setAnimationLoop((now: number) => {
     switch (b) {
       case 'toggleHelp': toggleHelp(); break;
       case 'camera': rig.cycle(); break;
-      case 'reset': car.reset(car.x, car.z, car.yaw); rig.snap(car); break;
+      case 'reset': scoring.breakCombo('Recolocado'); car.reset(car.x, car.z, car.yaw); rig.snap(car); break;
       case 'shiftUp':
       case 'shiftDown':
         if (settings.gearbox === 'auto') {
@@ -190,9 +207,13 @@ world.renderer.setAnimationLoop((now: number) => {
       car.step(DT, frame);
       acc -= DT;
     }
+    scoring.update(dt, car);
+    skids.update(car);
   } else {
     acc = 0;
   }
+  smoke.update(paused ? 0 : dt, car);
+  audio.update(dt, car, paused);
 
   // rumble from rear tyre sliding
   rumbleT -= dt;
@@ -209,8 +230,9 @@ world.renderer.setAnimationLoop((now: number) => {
   rig.update(car, dt);
   world.follow(car.x, car.z);
   hud.update(car, dt, fps);
+  gameHud.update(dt);
   world.renderer.render(world.scene, rig.camera);
 });
 
 // debugging handle
-(window as unknown as { __game: unknown }).__game = { car, rig, world, input, settings };
+(window as unknown as { __game: unknown }).__game = { car, rig, world, input, settings, scoring, audio, smoke, skids };

@@ -30,6 +30,7 @@ export interface Settings {
   wheelRange: number;                  // degrees lock-to-lock the wheel driver reports
   steerRange: number;                  // degrees lock-to-lock that give full front lock
   vibration: boolean;
+  volume: number;
   showHelp: boolean;
   showTelemetry: boolean;
   bindings: Record<string, Binding[]>; // keyed by Gamepad.id
@@ -49,6 +50,7 @@ export function defaultSettings(): Settings {
     wheelRange: 900,
     steerRange: 540,
     vibration: true,
+    volume: 0.7,
     showHelp: true,
     showTelemetry: false,
     bindings: {},
