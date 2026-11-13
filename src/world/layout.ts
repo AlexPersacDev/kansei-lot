@@ -22,13 +22,13 @@ export const OBSTACLE_SIZE: Record<ObstacleKind, { radius?: number; half?: [numb
   wall: { half: [1.0, 0.32], height: 0.8, breaksCombo: true, dynamic: false, mass: 0 },
 };
 
-export const HALF = 300;
+export const HALF = 180;
 
 export const ZONES: Zone[] = [
-  { id: 'free', name: 'Zona libre', x0: -HALF, x1: 0, z0: -HALF, z1: 0, spawn: { x: -150, z: -150, yaw: 0 }, tint: '#4c7d5a' },
-  { id: 'pivots', name: 'Zona de pivotes', x0: 0, x1: HALF, z0: -HALF, z1: 0, spawn: { x: 150, z: -278, yaw: 0 }, tint: '#7d6a4c' },
-  { id: 'lanes', name: 'Zona de carriles', x0: -HALF, x1: 0, z0: 0, z1: HALF, spawn: { x: -60, z: 14, yaw: 0 }, tint: '#4c5f7d' },
-  { id: 'gymkhana', name: 'Gymkhana', x0: 0, x1: HALF, z0: 0, z1: HALF, spawn: { x: 60, z: 14, yaw: 0 }, tint: '#7d4c6c' },
+  { id: 'free', name: 'Zona libre', x0: -HALF, x1: 0, z0: -HALF, z1: 0, spawn: { x: -90, z: -90, yaw: 0 }, tint: '#4c7d5a' },
+  { id: 'pivots', name: 'Zona de pivotes', x0: 0, x1: HALF, z0: -HALF, z1: 0, spawn: { x: 90, z: -170, yaw: 0 }, tint: '#7d6a4c' },
+  { id: 'lanes', name: 'Zona de carriles', x0: -HALF, x1: 0, z0: 0, z1: HALF, spawn: { x: -35, z: 5, yaw: 0 }, tint: '#4c5f7d' },
+  { id: 'gymkhana', name: 'Gymkhana', x0: 0, x1: HALF, z0: 0, z1: HALF, spawn: { x: 30, z: 6, yaw: 0 }, tint: '#7d4c6c' },
 ];
 
 export function zoneAt(x: number, z: number): Zone {
@@ -95,49 +95,51 @@ export function buildLayout(): Layout {
   paint.push({ pts: [[-HALF + 2, -0.3], [HALF - 2, -0.3]], width: 0.15, color: 'yellow' });
   paint.push({ pts: [[-HALF + 2, -HALF + 2], [HALF - 2, -HALF + 2], [HALF - 2, HALF - 2], [-HALF + 2, HALF - 2]], width: 0.3, color: 'white', closed: true });
 
+  // Compact lot (360 × 360 m): element spacing tightened, but ring radii, lane widths and
+  // cone spacing keep their real drift sizes.
+
   // ---- 1. free zone: just the name and a big practice circle
-  labels.push({ text: 'ZONA LIBRE', x: -150, z: -125, yaw: 0, size: 26 });
-  paint.push({ pts: ring(-150, -200, 25, 120), width: 0.2, color: 'white', closed: true, dash: [3, 3] });
+  labels.push({ text: 'ZONA LIBRE', x: -90, z: -70, yaw: 0, size: 22 });
+  paint.push({ pts: ring(-90, -120, 25, 120), width: 0.2, color: 'white', closed: true, dash: [3, 3] });
 
   // ---- 2. pivots zone
-  labels.push({ text: 'ZONA DE PIVOTES', x: 150, z: -262, yaw: 0, size: 30 });
+  labels.push({ text: 'ZONA DE PIVOTES', x: 90, z: -155, yaw: 0, size: 24 });
   // cone cluster pivot
-  pivot('cone', 80, -205, 9, 'Pivote de conos');
-  ob('cone', 80.6, -204.6); ob('cone', 79.4, -205.4);
+  pivot('cone', 45, -115, 9, 'Pivote de conos');
+  ob('cone', 45.6, -114.6); ob('cone', 44.4, -115.4);
   // stacked tyres pivot
-  pivot('tires', 80, -95, 10, 'Neumáticos');
+  pivot('tires', 45, -45, 10, 'Neumáticos');
   // figure eight around two barrels
-  pivot('barrel', 165, -215, 12, 'Ocho');
-  pivot('barrel', 165, -185, 12, 'Ocho');
+  pivot('barrel', 100, -128, 12, 'Ocho');
+  pivot('barrel', 100, -100, 12, 'Ocho');
   // concrete block pivot (breaks the combo if hit)
-  pivot('block', 165, -85, 10, 'Bloque', 0.4);
+  pivot('block', 100, -45, 10, 'Bloque', 0.4);
   // lamp pole pivot (breaks the combo if hit)
-  pivot('pole', 245, -255, 9, 'Poste');
+  pivot('pole', 155, -165, 9, 'Poste');
   // slalom
-  const slalom: [number, number][] = [];
-  for (let z = -215; z <= -45; z += 17) { ob('cone', 245, z); clips.push({ x: 245, z, radius: 2.4, label: 'Slalom' }); slalom.push([245, z]); }
-  paint.push({ pts: line([245, -230], [245, -30]), width: 0.15, color: 'white', dash: [3, 4] });
-  labels.push({ text: 'SLALOM', x: 245, z: -238, yaw: 0, size: 12 });
+  for (let z = -132; z <= -20; z += 16) { ob('cone', 152, z); clips.push({ x: 152, z, radius: 2.4, label: 'Slalom' }); }
+  paint.push({ pts: line([152, -145], [152, -10]), width: 0.15, color: 'white', dash: [3, 4] });
+  labels.push({ text: 'SLALOM', x: 152, z: -141, yaw: 0, size: 10 });
 
   // ---- 3. lanes zone: entry straight → 180° right hairpin with outer wall → exit; plus a straight lane
-  labels.push({ text: 'ZONA DE CARRILES', x: -150, z: 28, yaw: 0, size: 28 });
+  labels.push({ text: 'ZONA DE CARRILES', x: -80, z: 9, yaw: 0, size: 22 });
   {
     const W = 6; // half width of the lane
-    const C: [number, number] = [-130, 140];
-    const R = 70;
-    // centreline: start (-60, 30) north to (-60, 140), arc around C from angle 0 to π, exit south
-    const entry = line([-60, 30], [-60, 140], 12);
+    const C: [number, number] = [-80, 85];
+    const R = 45;
+    // centreline: start (-35, 18) north to (-35, 85), arc around C from angle 0 to π, exit south
+    const entry = line([-35, 18], [-35, 85], 8);
     const arc = arcPts(C[0], C[1], R, 0, Math.PI, 2);
-    const exit = line([-200, 140], [-200, 30], 12);
+    const exit = line([-125, 85], [-125, 18], 8);
     const centre = [...entry, ...arc.slice(1), ...exit.slice(1)];
     // the centre C is to the driver's right (−x), so this is a right-hand hairpin: inside = −offset
     const inner = offset(centre, -W), outer = offset(centre, W);
     paint.push({ pts: inner, width: 0.25, color: 'white' }, { pts: outer, width: 0.25, color: 'white' });
     along(inner, 10, (x, z) => ob('cone', x, z));
     along(outer, 10, (x, z) => ob('cone', x, z));
-    paint.push({ pts: line([-60 - W, 30], [-60 + W, 30]), width: 0.6, color: 'white' });
-    labels.push({ text: 'ENTRADA', x: -60, z: 22, yaw: 0, size: 9 });
-    labels.push({ text: 'SALIDA', x: -200, z: 22, yaw: Math.PI, size: 9 });
+    paint.push({ pts: line([-35 - W, 18], [-35 + W, 18]), width: 0.6, color: 'white' });
+    labels.push({ text: 'ENTRADA', x: -35, z: 12, yaw: 0, size: 8 });
+    labels.push({ text: 'SALIDA', x: -125, z: 12, yaw: Math.PI, size: 8 });
     // inner clipping points (apexes) — painted boxes
     for (const a of [Math.PI * 0.25, Math.PI * 0.5, Math.PI * 0.75]) {
       const x = C[0] + Math.cos(a) * (R - W - 1.5), z = C[1] + Math.sin(a) * (R - W - 1.5);
@@ -154,14 +156,14 @@ export function buildLayout(): Layout {
   }
   {
     // straight transition lane with alternating clip boxes
-    const x = -265, W = 6;
-    paint.push({ pts: line([x - W, 40], [x - W, 270]), width: 0.25, color: 'white' });
-    paint.push({ pts: line([x + W, 40], [x + W, 270]), width: 0.25, color: 'white' });
-    along(line([x - W, 40], [x - W, 270]), 12, (cx, cz) => ob('cone', cx, cz));
-    along(line([x + W, 40], [x + W, 270]), 12, (cx, cz) => ob('cone', cx, cz));
-    labels.push({ text: 'TRANSICIONES', x, z: 30, yaw: 0, size: 10 });
+    const x = -158, W = 6;
+    paint.push({ pts: line([x - W, 25], [x - W, 170]), width: 0.25, color: 'white' });
+    paint.push({ pts: line([x + W, 25], [x + W, 170]), width: 0.25, color: 'white' });
+    along(line([x - W, 25], [x - W, 170]), 12, (cx, cz) => ob('cone', cx, cz));
+    along(line([x + W, 25], [x + W, 170]), 12, (cx, cz) => ob('cone', cx, cz));
+    labels.push({ text: 'TRANSICIONES', x, z: 17, yaw: 0, size: 9 });
     let side = 1;
-    for (let z = 80; z <= 240; z += 40) {
+    for (let z = 45; z <= 157; z += 28) {
       const cx = x + side * (W - 1.5);
       paint.push({ pts: ring(cx, z, 1.6, 24), width: 0.35, color: 'yellow', closed: true });
       clips.push({ x: cx, z, radius: 3.2, label: 'Clip' });
@@ -170,22 +172,22 @@ export function buildLayout(): Layout {
   }
 
   // ---- 4. gymkhana: slalom → 360 around tyres → eight around barrels → finish box
-  labels.push({ text: 'GYMKHANA', x: 150, z: 22, yaw: 0, size: 26 });
-  paint.push({ pts: line([52, 34], [68, 34]), width: 0.6, color: 'white' });
-  labels.push({ text: '1', x: 75, z: 50, yaw: 0, size: 6, color: '#ffd24a' });
-  for (let z = 60; z <= 140; z += 20) { ob('cone', 60, z); clips.push({ x: 60, z, radius: 2.4, label: 'Slalom' }); }
-  labels.push({ text: '2', x: 75, z: 175, yaw: 0, size: 6, color: '#ffd24a' });
-  pivot('tires', 60, 195, 9, '360°');
-  labels.push({ text: '3', x: 140, z: 255, yaw: 0, size: 6, color: '#ffd24a' });
-  pivot('barrel', 150, 220, 11, 'Ocho');
-  pivot('barrel', 180, 220, 11, 'Ocho');
-  labels.push({ text: '4', x: 235, z: 200, yaw: 0, size: 6, color: '#ffd24a' });
+  labels.push({ text: 'GYMKHANA', x: 95, z: 10, yaw: 0, size: 22 });
+  paint.push({ pts: line([22, 20], [38, 20]), width: 0.6, color: 'white' });
+  labels.push({ text: '1', x: 45, z: 30, yaw: 0, size: 6, color: '#ffd24a' });
+  for (let z = 35; z <= 105; z += 14) { ob('cone', 30, z); clips.push({ x: 30, z, radius: 2.4, label: 'Slalom' }); }
+  labels.push({ text: '2', x: 45, z: 115, yaw: 0, size: 6, color: '#ffd24a' });
+  pivot('tires', 30, 130, 9, '360°');
+  labels.push({ text: '3', x: 70, z: 162, yaw: 0, size: 6, color: '#ffd24a' });
+  pivot('barrel', 90, 140, 11, 'Ocho');
+  pivot('barrel', 118, 140, 11, 'Ocho');
+  labels.push({ text: '4', x: 150, z: 122, yaw: 0, size: 6, color: '#ffd24a' });
   // finish box (park inside)
-  const bx = 250, bz = 160, hw = 3.5, hl = 6;
+  const bx = 155, bz = 95, hw = 3.5, hl = 6;
   paint.push({ pts: [[bx - hw, bz - hl], [bx + hw, bz - hl], [bx + hw, bz + hl], [bx - hw, bz + hl]], width: 0.3, color: 'yellow', closed: true });
   for (const [cx, cz] of [[bx - hw, bz - hl], [bx + hw, bz - hl], [bx + hw, bz + hl], [bx - hw, bz + hl]] as [number, number][]) ob('cone', cx, cz);
   labels.push({ text: 'META', x: bx, z: bz, yaw: Math.PI, size: 5 });
-  paint.push({ pts: [[60, 145], [60, 170], [75, 215], [120, 235], [165, 240], [215, 220], [240, 190], [250, 170]], width: 0.15, color: 'white', dash: [2, 3] });
+  paint.push({ pts: [[30, 110], [30, 117], [44, 148], [66, 160], [104, 162], [135, 152], [150, 132], [155, 104]], width: 0.15, color: 'white', dash: [2, 3] });
 
   return { obstacles, paint, labels, clips };
 }

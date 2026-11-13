@@ -211,11 +211,21 @@ function toggleHelp(): void {
   help.visible = settings.showHelp;
 }
 
-window.addEventListener('resize', () => {
+// Phones report the new size late after a rotation (the 'resize' event often still carries the old
+// one), which left the camera with the old aspect ratio and a squashed image. So the size is
+// checked every frame and everything is re-fitted as soon as it really changes.
+let viewW = 0, viewH = 0;
+function fitViewport(): void {
+  const w = app.clientWidth, h = app.clientHeight;
+  if (w === viewW && h === viewH || w === 0 || h === 0) return;
+  viewW = w; viewH = h;
   world.resize();
-  rig.camera.aspect = app.clientWidth / app.clientHeight;
+  rig.camera.aspect = w / h;
   rig.camera.updateProjectionMatrix();
-});
+  touchDev?.layout();
+}
+for (const ev of ['resize', 'orientationchange']) window.addEventListener(ev, fitViewport);
+window.visualViewport?.addEventListener('resize', fitViewport);
 window.addEventListener('keydown', (e) => {
   if (e.code === 'F3') {
     e.preventDefault();
@@ -255,6 +265,7 @@ let grindWarned: number | null = null;
 let rumbleT = 0;
 
 world.renderer.setAnimationLoop((now: number) => {
+  fitViewport();
   const dt = Math.min(MAX_FRAME, (now - last) / 1000);
   last = now;
   fps += (1 / Math.max(dt, 1e-3) - fps) * 0.05;

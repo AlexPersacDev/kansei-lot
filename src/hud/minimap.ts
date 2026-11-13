@@ -2,7 +2,7 @@ import type { Car } from '../physics/car';
 import { HALF, OBSTACLE_SIZE, ZONES, type Layout } from '../world/layout';
 
 const PX_PER_M = 2;      // pre-rendered map resolution
-const VIEW_M = 170;      // metres shown across the minimap
+const VIEW_M = 130;      // metres shown across the minimap
 
 /**
  * Heading-up local minimap. The whole lot is pre-rendered once (zones, paint, obstacles);

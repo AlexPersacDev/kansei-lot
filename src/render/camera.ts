@@ -6,8 +6,8 @@ const MODES: CameraMode[] = ['chase', 'far', 'hood'];
 
 interface ChaseParams { dist: number; height: number; look: number; fov: number; distGain: number; fovGain: number }
 const PARAMS: Record<'chase' | 'far', ChaseParams> = {
-  chase: { dist: 5.4, height: 1.55, look: 0.95, fov: 60, distGain: 1.4, fovGain: 10 },
-  far: { dist: 9.5, height: 3.4, look: 0.8, fov: 55, distGain: 2.5, fovGain: 8 },
+  chase: { dist: 7.2, height: 2.1, look: 0.9, fov: 60, distGain: 1.8, fovGain: 10 },
+  far: { dist: 12, height: 4.4, look: 0.8, fov: 55, distGain: 3, fovGain: 8 },
 };
 
 /**

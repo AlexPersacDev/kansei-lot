@@ -9,7 +9,8 @@ const CSS = `
 .kl-tc { position: absolute; pointer-events: auto; touch-action: none; border: 2px solid rgba(255,255,255,.28);
   background: rgba(255,255,255,.07); color: rgba(255,255,255,.75); font: 700 13px system-ui; letter-spacing: .06em;
   display: flex; align-items: flex-end; justify-content: center; padding-bottom: 10px; box-sizing: border-box;
-  border-radius: 18px; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+  border-radius: 16px; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+@media (max-height: 430px) { .kl-tc { font-size: 11px; padding-bottom: 7px; } .kl-tc.round { font-size: 12px; } }
 .kl-tc .fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: rgba(255,255,255,.16); }
 .kl-tc.on { border-color: rgba(255,255,255,.55); background: rgba(255,255,255,.14); }
 .kl-tc span { position: relative; }
@@ -73,8 +74,8 @@ export class TouchDevice implements InputDevice {
     const bottom = 'max(10px, env(safe-area-inset-bottom))';
     // buttons whenever the gyro isn't actually delivering data (denied, missing, not started)
     const buttons = this.settings.touchSteer === 'buttons' || !this.gyro.live;
-    const zoneW = Math.round(u * 0.3), zoneH = Math.round(H * 0.52);
-    const hb = Math.round(u * 0.26), small = Math.round(u * 0.15), steer = Math.round(u * 0.25);
+    const zoneW = Math.round(u * 0.23), zoneH = Math.round(H * 0.42);
+    const hb = Math.round(u * 0.2), small = Math.round(u * 0.12), steer = Math.round(u * 0.19);
     const set = (c: Ctl, css: Partial<CSSStyleDeclaration>) => Object.assign(this.els.get(c)!.style, { left: '', right: '', top: '', bottom: '', ...css });
     // right thumb: gas (outer) ; left thumb: brake (outer) + handbrake (inner)
     set('gas', { right: safeR, bottom, width: `${zoneW}px`, height: `${zoneH}px` });

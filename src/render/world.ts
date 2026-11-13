@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
-export const LOT_SIZE = 600;
+import { HALF } from '../world/layout';
+
+export const LOT_SIZE = HALF * 2;
 
 export interface World {
   renderer: THREE.WebGLRenderer;
