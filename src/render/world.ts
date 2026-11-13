@@ -77,14 +77,18 @@ export function createWorld(container: HTMLElement): World {
   lot.receiveShadow = true;
   scene.add(lot);
 
-  // dull surroundings to the horizon
-  const outer = new THREE.Mesh(
-    new THREE.PlaneGeometry(4000, 4000),
-    new THREE.MeshStandardMaterial({ color: '#6f7a5c', roughness: 1 }),
-  );
-  outer.rotation.x = -Math.PI / 2;
-  outer.position.y = -0.02;
-  scene.add(outer);
+  // dull surroundings to the horizon: a frame around the lot (no overlap → no z-fighting from afar)
+  const grass = new THREE.MeshStandardMaterial({ color: '#6f7a5c', roughness: 1 });
+  const H = LOT_SIZE / 2, FAR = 2000;
+  for (const [cx, cz, w, d] of [
+    [0, H + (FAR - H) / 2, FAR * 2, FAR - H], [0, -H - (FAR - H) / 2, FAR * 2, FAR - H],
+    [H + (FAR - H) / 2, 0, FAR - H, LOT_SIZE], [-H - (FAR - H) / 2, 0, FAR - H, LOT_SIZE],
+  ]) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), grass);
+    m.rotation.x = -Math.PI / 2;
+    m.position.set(cx, -0.01, cz);
+    scene.add(m);
+  }
 
   // lot edge line
   const border = new THREE.LineSegments(

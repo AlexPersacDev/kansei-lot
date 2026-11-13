@@ -18,6 +18,9 @@ import { Hud } from './hud/hud';
 import { TireSmoke } from './render/smoke';
 import { SkidMarks } from './render/skids';
 import { CarAudio } from './audio/audio';
+import { buildLayout, HALF, ZONES, zoneAt } from './world/layout';
+import { Track, type Impact } from './world/track';
+import { Minimap } from './hud/minimap';
 
 await accessGate();
 injectStyles();
@@ -31,7 +34,12 @@ const settings = loadSettings();
 const app = document.getElementById('app')!;
 const world = createWorld(app);
 const car = new Car(E30);
-car.reset(0, 0, 0);
+const layout = buildLayout();
+const track = new Track(layout);
+world.scene.add(track.group);
+const startZone = ZONES[0];
+car.reset(startZone.spawn.x, startZone.spawn.z, startZone.spawn.yaw);
+track.initPhysics(car).catch((e) => console.error('Rapier failed to load', e));
 const visual = new E30Visual(car, world.envMap);
 world.scene.add(visual.root);
 const rig = new CameraRig(app.clientWidth / app.clientHeight);
@@ -45,6 +53,19 @@ const smoke = new TireSmoke();
 const skids = new SkidMarks();
 world.scene.add(smoke.mesh, skids.mesh);
 const audio = new CarAudio();
+const minimap = new Minimap(document.body, layout);
+scoring.setClipPoints(layout.clips);
+scoring.setZone(startZone.name);
+
+function spawnAt(zoneId: string): void {
+  const z = ZONES.find((zn) => zn.id === zoneId) ?? ZONES[0];
+  scoring.breakCombo('Recolocado');
+  car.reset(z.spawn.x, z.spawn.z, z.spawn.yaw);
+  track.teleportCar(car);
+  rig.snap(car);
+  scoring.setZone(z.name);
+}
+
 scoring.onEvent = (e) => {
   gameHud.event(e);
   const a = input.active;
@@ -68,6 +89,8 @@ const pause = new PauseMenu(settings, {
   defaultTuning,
   apply: () => applySettings(),
   remap: (p) => startRemap(p),
+  zones: () => ZONES.map((z) => ({ id: z.id, name: z.name })),
+  goZone: (id) => spawnAt(id),
   onClose: () => { paused = false; },
 });
 
@@ -175,7 +198,7 @@ world.renderer.setAnimationLoop((now: number) => {
     switch (b) {
       case 'toggleHelp': toggleHelp(); break;
       case 'camera': rig.cycle(); break;
-      case 'reset': scoring.breakCombo('Recolocado'); car.reset(car.x, car.z, car.yaw); rig.snap(car); break;
+      case 'reset': scoring.breakCombo('Recolocado'); car.reset(car.x, car.z, car.yaw); track.teleportCar(car); rig.snap(car); break;
       case 'shiftUp':
       case 'shiftDown':
         if (settings.gearbox === 'auto') {
@@ -203,12 +226,29 @@ world.renderer.setAnimationLoop((now: number) => {
 
   if (!paused) {
     acc += dt;
+    let impact: Impact | null = null;
     while (acc >= DT) {
       car.step(DT, frame);
+      const hit = track.collideCar(car);
+      if (hit && (!impact || hit.speed > impact.speed)) impact = hit;
+      track.stepProps(car);
       acc -= DT;
     }
+    if (impact && impact.speed > 1.2) {
+      if (impact.breaksCombo) scoring.breakCombo('¡Golpe!');
+      const a = input.active;
+      if (a instanceof PadDevice && settings.vibration) a.rumble(Math.min(1, impact.speed / 8), 0.3, 200);
+    }
+    // zone + out-of-bounds
+    if (Math.abs(car.x) > HALF - 1 || Math.abs(car.z) > HALF - 1) {
+      spawnAt(zoneAt(Math.max(-HALF + 2, Math.min(HALF - 2, car.x)), Math.max(-HALF + 2, Math.min(HALF - 2, car.z))).id);
+      toast('Fuera de límites: recolocado');
+    }
+    const zone = zoneAt(car.x, car.z);
+    if (zone.name !== scoring.zone && !scoring.active) scoring.setZone(zone.name);
     scoring.update(dt, car);
     skids.update(car);
+    track.syncProps(dt, car);
   } else {
     acc = 0;
   }
@@ -231,8 +271,9 @@ world.renderer.setAnimationLoop((now: number) => {
   world.follow(car.x, car.z);
   hud.update(car, dt, fps);
   gameHud.update(dt);
+  minimap.update(dt, car);
   world.renderer.render(world.scene, rig.camera);
 });
 
 // debugging handle
-(window as unknown as { __game: unknown }).__game = { car, rig, world, input, settings, scoring, audio, smoke, skids };
+(window as unknown as { __game: unknown }).__game = { car, rig, world, input, settings, scoring, audio, smoke, skids, track, spawnAt };

@@ -10,6 +10,8 @@ export interface PauseHooks {
   /** Called after any change; apply settings to the car / devices. */
   apply: () => void;
   remap: (pad: PadDevice) => void;
+  zones: () => { id: string; name: string }[];
+  goZone: (id: string) => void;
   onClose: () => void;
 }
 
@@ -83,6 +85,20 @@ export class PauseMenu {
     const title = document.createElement('h2');
     title.textContent = 'Pausa';
     menu.appendChild(title);
+
+    section('Ir a zona');
+    {
+      const wrap = document.createElement('div');
+      wrap.className = 'kl-actions';
+      wrap.style.marginTop = '0';
+      for (const z of h.zones()) {
+        const b = document.createElement('button');
+        b.textContent = z.name;
+        b.addEventListener('click', () => { h.goZone(z.id); this.close(); });
+        wrap.appendChild(b);
+      }
+      menu.appendChild(wrap);
+    }
 
     section('Conducción');
     slider(`Autocontravolante (${KIND_NAME[kind]})`, 0, 1, 0.05, () => s.assist[kind], (v) => { s.assist[kind] = v; }, pct);
