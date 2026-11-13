@@ -23,7 +23,14 @@ import { Track, type Impact } from './world/track';
 import { Minimap } from './hud/minimap';
 import { FfbDriver } from './input/ffb';
 import { openCalibration } from './ui/calibrate';
+import { GyroSteer } from './input/gyro';
+import { TouchDevice } from './input/touch';
+import { enterFullscreenLandscape, isTouchDevice, keepAwake, lockViewport, RotateOverlay, startScreen } from './ui/mobile';
+import { QualityManager } from './render/quality';
 
+const touchMode = isTouchDevice();
+if (touchMode) document.body.classList.add('kl-touch');
+lockViewport();
 await accessGate();
 injectStyles();
 
@@ -57,6 +64,12 @@ world.scene.add(smoke.mesh, skids.mesh);
 const audio = new CarAudio();
 const minimap = new Minimap(document.body, layout);
 const ffb = new FfbDriver(); // no-op device in the browser; a desktop build plugs a real one in
+const quality = new QualityManager(world, smoke, touchMode);
+let appliedQuality = '';
+quality.onChange = (l) => { if (quality.auto) toast(`Calidad automática: ${({ low: 'baja', medium: 'media', high: 'alta' })[l]}`, 1500); };
+const gyro = new GyroSteer();
+const touchDev = touchMode ? new TouchDevice(settings, gyro) : null;
+if (touchDev) input.touch = touchDev;
 scoring.setClipPoints(layout.clips);
 scoring.setZone(startZone.name);
 
@@ -98,6 +111,9 @@ const pause = new PauseMenu(settings, {
   },
   zones: () => ZONES.map((z) => ({ id: z.id, name: z.name })),
   goZone: (id) => spawnAt(id),
+  touch: touchMode,
+  calibrateGyro: () => gyro.calibrate(),
+  qualityLabel: () => ({ low: 'baja', medium: 'media', high: 'alta' })[quality.level],
   onClose: () => { paused = false; },
 });
 
@@ -117,12 +133,19 @@ function applySettings(): void {
   help.visible = settings.showHelp;
   hud.showTelemetry = settings.showTelemetry;
   audio.setVolume(settings.volume);
+  if (settings.quality !== appliedQuality) { appliedQuality = settings.quality; quality.setMode(settings.quality, touchMode); }
+  if (touchDev) {
+    touchDev.layout();
+    // dim (not hide) the touch controls while a pad drives, so a tap can switch back
+    touchDev.root.style.opacity = input.active === touchDev ? '1' : '0.3';
+  }
   refreshHelp();
 }
 
 function refreshHelp(): void {
   const a = input.active;
-  help.show(a.family, a instanceof PadDevice ? a.bindings : undefined, settings.gearbox === 'manual');
+  help.show(a.family, a instanceof PadDevice ? a.bindings : undefined, settings.gearbox === 'manual',
+    settings.touchSteer === 'buttons' || !gyro.live, settings.touchShiftButtons);
 }
 
 function startRemap(p: PadDevice): void {
@@ -160,6 +183,11 @@ function cornerButton(label: string, right: number, title: string, fn: () => voi
 }
 cornerButton('❚❚', 0, 'Pausa', () => togglePause());
 cornerButton('?', 46, 'Ayuda de controles', () => toggleHelp());
+if (touchMode) {
+  cornerButton('📷', 92, 'Cámara', () => rig.cycle());
+  cornerButton('↺', 138, 'Recolocar', () => { scoring.breakCombo('Recolocado'); car.reset(car.x, car.z, car.yaw); track.teleportCar(car); rig.snap(car); });
+  cornerButton('◎', 184, 'Calibrar centro del giroscopio', () => { gyro.calibrate(); toast('Centro del giroscopio calibrado', 1200); });
+}
 
 function togglePause(): void {
   if (pause.open) pause.close();
@@ -185,7 +213,27 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+if (touchDev) input.setActive(touchDev);
 applySettings();
+
+// ---- tap to start (unlocks audio; on phones asks for motion permission, fullscreen, wake lock)
+const rotate = new RotateOverlay(touchMode);
+let started = false;
+void startScreen(touchMode, () => {
+  // iOS: the permission prompt must be the first thing inside the gesture
+  const gyroAsk = touchMode && settings.touchSteer === 'gyro' ? gyro.request() : null;
+  audio.unlock();
+  if (touchMode) { enterFullscreenLandscape(); keepAwake(); }
+  gyroAsk?.then((ok) => {
+    if (ok) { applySettings(); return; }
+    settings.touchSteer = 'buttons';
+    saveSettings(settings);
+    applySettings();
+    toast(gyro.permission === 'denied'
+      ? 'Permiso de movimiento denegado: dirección con botones ◀ ▶ (cámbialo en Pausa)'
+      : 'Sin giroscopio en este dispositivo: dirección con botones ◀ ▶', 4000);
+  });
+}).then(() => { started = true; });
 
 let last = performance.now();
 let acc = 0;
@@ -200,9 +248,10 @@ world.renderer.setAnimationLoop((now: number) => {
   fps += (1 / Math.max(dt, 1e-3) - fps) * 0.05;
 
   const frame = input.poll(dt);
+  const halted = paused || !started || rotate.blocking;
   for (const b of frame.pressed) {
-    if (b === 'pause') { togglePause(); continue; }
-    if (paused) continue;
+    if (b === 'pause') { if (started) togglePause(); continue; }
+    if (halted) continue;
     switch (b) {
       case 'toggleHelp': toggleHelp(); break;
       case 'camera': rig.cycle(); break;
@@ -221,7 +270,7 @@ world.renderer.setAnimationLoop((now: number) => {
   }
 
   // H-shifter: act on position changes; optionally demand the clutch
-  if (frame.hGear !== null && frame.hGear !== appliedHGear && !paused) {
+  if (frame.hGear !== null && frame.hGear !== appliedHGear && !halted) {
     const g = frame.hGear;
     if (g !== 0 && settings.hRequiresClutch && frame.hasClutchPedal && frame.clutch < 0.6) {
       // not engaged yet; retried every frame until the clutch is pressed
@@ -238,7 +287,7 @@ world.renderer.setAnimationLoop((now: number) => {
   }
   car.setup.autoClutch = !frame.hasClutchPedal;
 
-  if (!paused) {
+  if (!halted) {
     acc += dt;
     let impact: Impact | null = null;
     while (acc >= DT) {
@@ -266,14 +315,15 @@ world.renderer.setAnimationLoop((now: number) => {
   } else {
     acc = 0;
   }
-  smoke.update(paused ? 0 : dt, car);
-  audio.update(dt, car, paused);
-  ffb.update(car, paused);
+  smoke.update(halted ? 0 : dt, car);
+  audio.update(dt, car, halted);
+  ffb.update(car, halted);
+  quality.update(dt, !halted);
 
   // rumble from rear tyre sliding
   rumbleT -= dt;
   const act = input.active;
-  if (rumbleT <= 0 && act instanceof PadDevice && settings.vibration && !paused) {
+  if (rumbleT <= 0 && act instanceof PadDevice && settings.vibration && !halted) {
     rumbleT = 0.1;
     const slide = Math.max(car.wheels[2].slideSpeed, car.wheels[3].slideSpeed);
     const weak = Math.min(1, slide / 14) * 0.6;
@@ -291,4 +341,4 @@ world.renderer.setAnimationLoop((now: number) => {
 });
 
 // debugging handle
-(window as unknown as { __game: unknown }).__game = { car, rig, world, input, settings, scoring, audio, smoke, skids, track, spawnAt, ffb };
+(window as unknown as { __game: unknown }).__game = { car, rig, world, input, settings, scoring, audio, smoke, skids, track, spawnAt, ffb, quality, gyro, touchDev };

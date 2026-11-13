@@ -54,17 +54,19 @@ const MOUSE: Record<HelpAction, string> = {
 };
 
 const TOUCH: Record<HelpAction, string> = {
-  steer: pill('Inclinar el móvil'), throttle: pill('Zona derecha ↕'), brake: pill('Zona izquierda ↕'),
-  handbrake: pill('Botón FM'), clutch: pill('—'), shiftUp: pill('+'), shiftDown: pill('−'),
+  steer: pill('Inclinar el móvil'), throttle: pill('GAS ↕'), brake: pill('FRENO ↕'),
+  handbrake: pill('FRENO MANO'), clutch: pill('—'), shiftUp: pill('+'), shiftDown: pill('−'),
   camera: pill('📷'), reset: pill('↺'), pause: pill('❚❚'), toggleHelp: pill('?'),
 };
+const TOUCH_BUTTONS: Record<HelpAction, string> = { ...TOUCH, steer: pill('◀ ▶') };
 
 function describeBinding(b: Binding | undefined): string {
   if (!b) return `<span class="kl-note">sin asignar</span>`;
   return pill(b.kind === 'axis' ? `Eje ${b.index}` : `Botón ${b.index}`);
 }
 
-export function helpRows(family: GlyphFamily, bindings?: Binding[]): Record<HelpAction, string> {
+export function helpRows(family: GlyphFamily, bindings?: Binding[], touchButtons = false): Record<HelpAction, string> {
+  if (family === 'touch' && touchButtons) return TOUCH_BUTTONS;
   switch (family) {
     case 'keyboard': return KEYBOARD;
     case 'mouse': return MOUSE;

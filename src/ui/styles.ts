@@ -10,6 +10,14 @@ const CSS = `
 @media (max-height: 520px), (max-width: 760px) {
   .kl-help { transform: scale(.82); transform-origin: left bottom; }
 }
+/* phones: help goes under the zone info (top-left), the dash moves between the thumb zones */
+body.kl-touch .kl-help { bottom: auto; top: calc(max(10px, env(safe-area-inset-top)) + 58px); transform: scale(.72); transform-origin: left top; }
+body.kl-touch .kl-dash { right: auto; left: 50%; transform: translateX(-50%); text-align: center; bottom: max(6px, env(safe-area-inset-bottom)); }
+body.kl-touch .kl-dash .kl-rpm { margin: 4px auto 0; width: 150px; }
+body.kl-touch .kl-dash .spd { font-size: 30px; }
+body.kl-touch .kl-dash .gear { font-size: 22px; }
+body.kl-touch .kl-dash .kl-rpm-l, body.kl-touch .kl-dash .mode { display: none; }
+.kl-btn { touch-action: manipulation; }
 .kl-help h4 { margin: 0 0 6px; font: 600 11px system-ui; letter-spacing: .08em; text-transform: uppercase; color: #aab; }
 .kl-help table { border-collapse: collapse; }
 .kl-help td { padding: 2px 0; vertical-align: middle; }

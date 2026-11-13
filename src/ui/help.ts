@@ -18,15 +18,16 @@ export class HelpPanel {
   set visible(v: boolean) { this.el.style.display = v ? '' : 'none'; }
   get visible(): boolean { return this.el.style.display !== 'none'; }
 
-  show(family: GlyphFamily, bindings?: Binding[], manualGearbox = false): void {
-    const key = `${family}|${manualGearbox}|${JSON.stringify(bindings ?? [])}`;
+  show(family: GlyphFamily, bindings?: Binding[], manualGearbox = false, touchButtons = false, touchShift = false): void {
+    const key = `${family}|${manualGearbox}|${touchButtons}|${touchShift}|${JSON.stringify(bindings ?? [])}`;
     if (key === this.key) return;
     this.key = key;
-    const rows = helpRows(family, bindings);
+    const rows = helpRows(family, bindings, touchButtons);
     const order = Object.keys(HELP_LABELS) as HelpAction[];
     const html = order
       .filter((a) => !(family === 'touch' && a === 'clutch'))
-      .filter((a) => manualGearbox || family === 'wheel' || (a !== 'shiftUp' && a !== 'shiftDown') || family !== 'touch')
+      .filter((a) => family !== 'touch' || touchShift || (a !== 'shiftUp' && a !== 'shiftDown'))
+      .filter((a) => family !== 'touch' || a !== 'toggleHelp')
       .map((a) => `<tr><td>${rows[a]}</td><td>${HELP_LABELS[a]}</td></tr>`)
       .join('');
     this.el.innerHTML = `<h4>${FAMILY_TITLE[family]}</h4><table>${html}</table>`;

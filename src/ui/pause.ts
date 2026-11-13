@@ -12,6 +12,9 @@ export interface PauseHooks {
   remap: (pad: PadDevice) => void;
   calibrate: (pad: PadDevice) => void;
   zones: () => { id: string; name: string }[];
+  touch: boolean;
+  calibrateGyro: () => void;
+  qualityLabel: () => string;
   goZone: (id: string) => void;
   onClose: () => void;
 }
@@ -106,6 +109,22 @@ export class PauseMenu {
     select('Caja de cambios', [['auto', 'Automática'], ['manual', 'Manual']], () => s.gearbox, (v) => { s.gearbox = v; });
     check('Palanca H exige embrague', () => s.hRequiresClutch, (v) => { s.hRequiresClutch = v; });
 
+    if (h.touch) {
+      section('Móvil');
+      select('Dirección', [['gyro', 'Giroscopio (inclinar)'], ['buttons', 'Botones ◀ ▶']], () => s.touchSteer, (v) => { s.touchSteer = v; });
+      slider('Inclinación para bloqueo', 25, 90, 1, () => s.gyroLockDeg, (v) => { s.gyroLockDeg = v; }, (v) => `±${v}°`);
+      slider('Zona muerta del giroscopio', 0, 10, 0.5, () => s.gyroDeadzone, (v) => { s.gyroDeadzone = v; }, (v) => `${v}°`);
+      check('Invertir giroscopio', () => s.gyroInvert, (v) => { s.gyroInvert = v; });
+      check('Botones de cambio + / −', () => s.touchShiftButtons, (v) => { s.touchShiftButtons = v; });
+      const wrap = document.createElement('div');
+      wrap.className = 'kl-actions';
+      const b = document.createElement('button');
+      b.textContent = 'Calibrar centro del giroscopio';
+      b.addEventListener('click', () => { h.calibrateGyro(); b.textContent = 'Centro calibrado ✓'; });
+      wrap.appendChild(b);
+      menu.appendChild(wrap);
+    }
+
     section('Controles');
     check('Dirección con ratón (clic izq. gas, der. freno)', () => s.mouseSteer, (v) => { s.mouseSteer = v; });
     slider('Zona muerta del stick', 0, 0.3, 0.01, () => s.deadzone, (v) => { s.deadzone = v; }, pct);
@@ -139,6 +158,7 @@ export class PauseMenu {
 
     section('Pantalla y sonido');
     slider('Volumen', 0, 1, 0.05, () => s.volume, (v) => { s.volume = v; }, pct);
+    select('Calidad gráfica', [['auto', `Automática (${h.qualityLabel()})`], ['low', 'Baja'], ['medium', 'Media'], ['high', 'Alta']], () => s.quality, (v) => { s.quality = v; });
     check('Mostrar ayuda de controles', () => s.showHelp, (v) => { s.showHelp = v; });
     check('Telemetría de depuración', () => s.showTelemetry, (v) => { s.showTelemetry = v; });
 

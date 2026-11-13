@@ -33,6 +33,12 @@ export interface Settings {
   volume: number;
   showHelp: boolean;
   showTelemetry: boolean;
+  touchSteer: 'gyro' | 'buttons';
+  gyroLockDeg: number;                 // tilt for full lock (spec: ±60°)
+  gyroDeadzone: number;                // degrees
+  gyroInvert: boolean;
+  touchShiftButtons: boolean;          // show +/− (switches to manual when used)
+  quality: 'auto' | 'low' | 'medium' | 'high';
   bindings: Record<string, Binding[]>; // keyed by Gamepad.id
   tuning: Tuning | null;               // null = car defaults
 }
@@ -53,6 +59,12 @@ export function defaultSettings(): Settings {
     volume: 0.7,
     showHelp: true,
     showTelemetry: false,
+    touchSteer: 'gyro',
+    gyroLockDeg: 60,
+    gyroDeadzone: 2,
+    gyroInvert: false,
+    touchShiftButtons: false,
+    quality: 'auto',
     bindings: {},
     tuning: null,
   };
