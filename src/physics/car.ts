@@ -225,7 +225,8 @@ export class Car {
 
     // ---- clutch engagement
     const rpm = this.rpm;
-    let engage = 1 - clamp(ctl.clutch, 0, 1);
+    // pedal travel -> engagement: fully engaged in the top 15 %, bite point around mid-travel
+    let engage = 1 - smoothstep(0.15, 0.75, clamp(ctl.clutch, 0, 1));
     if (set.autoClutch && this.gear !== 0) {
       engage = Math.min(engage, smoothstep(spec.engine.idleRpm + 100, spec.engine.idleRpm + 1300, rpm));
     }

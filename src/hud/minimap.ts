@@ -17,7 +17,7 @@ export class Minimap {
   private size: number;
 
   constructor(parent: HTMLElement, layout: Layout) {
-    this.size = Math.round(Math.min(150, Math.max(110, window.innerHeight * 0.2)));
+    this.size = Math.round(Math.min(150, Math.max(76, Math.min(window.innerHeight, window.innerWidth) * 0.22)));
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     this.el = document.createElement('canvas');
     this.el.width = this.el.height = Math.round(this.size * dpr);

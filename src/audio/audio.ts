@@ -94,6 +94,26 @@ export class CarAudio {
 
   get running(): boolean { return this.ctx?.state === 'running'; }
 
+  /** Gearbox grind: short burst of harsh, band-passed noise. */
+  grind(): void {
+    const ctx = this.ctx;
+    if (!ctx || ctx.state !== 'running') return;
+    const t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    const len = Math.floor(ctx.sampleRate * 0.35);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (0.6 + 0.4 * Math.sin(i / 9));
+    src.buffer = buf;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2400; bp.Q.value = 3;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.33);
+    src.connect(bp).connect(g).connect(this.master);
+    src.start(t);
+  }
+
   update(dt: number, car: Car, paused: boolean): void {
     const ctx = this.ctx;
     if (!ctx || ctx.state !== 'running') return;

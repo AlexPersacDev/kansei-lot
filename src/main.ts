@@ -21,6 +21,8 @@ import { CarAudio } from './audio/audio';
 import { buildLayout, HALF, ZONES, zoneAt } from './world/layout';
 import { Track, type Impact } from './world/track';
 import { Minimap } from './hud/minimap';
+import { FfbDriver } from './input/ffb';
+import { openCalibration } from './ui/calibrate';
 
 await accessGate();
 injectStyles();
@@ -54,6 +56,7 @@ const skids = new SkidMarks();
 world.scene.add(smoke.mesh, skids.mesh);
 const audio = new CarAudio();
 const minimap = new Minimap(document.body, layout);
+const ffb = new FfbDriver(); // no-op device in the browser; a desktop build plugs a real one in
 scoring.setClipPoints(layout.clips);
 scoring.setZone(startZone.name);
 
@@ -89,6 +92,10 @@ const pause = new PauseMenu(settings, {
   defaultTuning,
   apply: () => applySettings(),
   remap: (p) => startRemap(p),
+  calibrate: (p) => {
+    paused = true;
+    openCalibration(p, settings, () => { paused = false; refreshHelp(); });
+  },
   zones: () => ZONES.map((z) => ({ id: z.id, name: z.name })),
   goZone: (id) => spawnAt(id),
   onClose: () => { paused = false; },
@@ -184,6 +191,7 @@ let last = performance.now();
 let acc = 0;
 let fps = 60;
 let appliedHGear: number | null = null;
+let grindWarned: number | null = null;
 let rumbleT = 0;
 
 world.renderer.setAnimationLoop((now: number) => {
@@ -217,8 +225,14 @@ world.renderer.setAnimationLoop((now: number) => {
     const g = frame.hGear;
     if (g !== 0 && settings.hRequiresClutch && frame.hasClutchPedal && frame.clutch < 0.6) {
       // not engaged yet; retried every frame until the clutch is pressed
+      if (grindWarned !== g) {
+        grindWarned = g;
+        toast('¡Embrague! La marcha no entra sin pisarlo', 1500);
+        audio.grind();
+      }
     } else if (car.selectGear(g) || car.gear === g) {
       appliedHGear = g;
+      grindWarned = null;
       if (settings.gearbox === 'auto') { settings.gearbox = 'manual'; saveSettings(settings); applySettings(); }
     }
   }
@@ -254,6 +268,7 @@ world.renderer.setAnimationLoop((now: number) => {
   }
   smoke.update(paused ? 0 : dt, car);
   audio.update(dt, car, paused);
+  ffb.update(car, paused);
 
   // rumble from rear tyre sliding
   rumbleT -= dt;
@@ -276,4 +291,4 @@ world.renderer.setAnimationLoop((now: number) => {
 });
 
 // debugging handle
-(window as unknown as { __game: unknown }).__game = { car, rig, world, input, settings, scoring, audio, smoke, skids, track, spawnAt };
+(window as unknown as { __game: unknown }).__game = { car, rig, world, input, settings, scoring, audio, smoke, skids, track, spawnAt, ffb };

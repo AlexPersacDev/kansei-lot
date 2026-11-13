@@ -10,6 +10,7 @@ export interface PauseHooks {
   /** Called after any change; apply settings to the car / devices. */
   apply: () => void;
   remap: (pad: PadDevice) => void;
+  calibrate: (pad: PadDevice) => void;
   zones: () => { id: string; name: string }[];
   goZone: (id: string) => void;
   onClose: () => void;
@@ -121,6 +122,12 @@ export class PauseMenu {
         b.textContent = `Asignar: ${p.id.slice(0, 38)}${p.id.length > 38 ? '…' : ''}`;
         b.addEventListener('click', () => { this.close(); h.remap(p); });
         wrap.appendChild(b);
+        if (p.usesBindings && p.bindings?.some((x) => x.kind === 'axis')) {
+          const c = document.createElement('button');
+          c.textContent = 'Calibrar ejes';
+          c.addEventListener('click', () => { this.close(); h.calibrate(p); });
+          wrap.appendChild(c);
+        }
       }
       menu.appendChild(wrap);
     } else {

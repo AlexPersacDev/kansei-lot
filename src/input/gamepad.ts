@@ -123,10 +123,12 @@ export class PadDevice implements InputDevice {
             out.steer = clamp(v * ratio, -1, 1);
             break;
           }
-          case 'throttle': out.throttle = clamp(v, 0, 1); break;
-          case 'brake': out.brake = clamp(v, 0, 1); break;
-          case 'clutch': out.clutch = clamp(v, 0, 1); out.hasClutchPedal = true; break;
-          case 'handbrake': out.handbrake = clamp(v, 0, 1); break;
+          // pedals: small dead band at both ends so worn pots still reach 0 and 100 %
+          // (combined-axis pedals work too: throttle and brake bind the same axis, opposite "full")
+          case 'throttle': out.throttle = pedal(v); break;
+          case 'brake': out.brake = pedal(v); break;
+          case 'clutch': out.clutch = pedal(v); out.hasClutchPedal = true; break;
+          case 'handbrake': out.handbrake = pedal(v); break;
         }
       }
       if (hasShifter) out.hGear = hGear ?? 0;
@@ -153,3 +155,5 @@ export class PadDevice implements InputDevice {
 
 function isAxisAction(a: string): boolean { return a === 'steer' || a === 'throttle' || a === 'brake' || a === 'clutch' || a === 'handbrake'; }
 function clamp(v: number, lo: number, hi: number): number { return v < lo ? lo : v > hi ? hi : v; }
+const PEDAL_DEADBAND = 0.03;
+function pedal(v: number): number { return clamp((v - PEDAL_DEADBAND) / (1 - 2 * PEDAL_DEADBAND), 0, 1); }
