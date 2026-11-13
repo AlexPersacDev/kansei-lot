@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
 export const LOT_SIZE = 600;
 
@@ -6,6 +7,8 @@ export interface World {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
   sun: THREE.DirectionalLight;
+  /** Prefiltered reflection map for car paint / chrome / glass (not applied to the ground). */
+  envMap: THREE.Texture;
   /** Keep the shadow frustum centred on the player. */
   follow(x: number, z: number): void;
   resize(): void;
@@ -97,8 +100,12 @@ export function createWorld(container: HTMLElement): World {
   };
   resize();
 
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const envMap = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  pmrem.dispose();
+
   return {
-    renderer, scene, sun, resize,
+    renderer, scene, sun, resize, envMap,
     follow(x, z) {
       sun.position.set(x + sunOffset.x, sunOffset.y, z + sunOffset.z);
       sun.target.position.set(x, 0, z);

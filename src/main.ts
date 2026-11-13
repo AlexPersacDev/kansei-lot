@@ -1,7 +1,7 @@
 import { E30 } from './data/e30';
 import { Car } from './physics/car';
 import { createWorld } from './render/world';
-import { BoxCarVisual } from './render/carView';
+import { E30Visual } from './render/e30Model';
 import { CameraRig } from './render/camera';
 import { InputManager } from './input/manager';
 import { PadDevice } from './input/gamepad';
@@ -32,7 +32,7 @@ const app = document.getElementById('app')!;
 const world = createWorld(app);
 const car = new Car(E30);
 car.reset(0, 0, 0);
-const visual = new BoxCarVisual(car);
+const visual = new E30Visual(car, world.envMap);
 world.scene.add(visual.root);
 const rig = new CameraRig(app.clientWidth / app.clientHeight);
 rig.snap(car);
