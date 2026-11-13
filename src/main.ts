@@ -28,6 +28,11 @@ import { TouchDevice } from './input/touch';
 import { enterFullscreenLandscape, isTouchDevice, keepAwake, lockViewport, RotateOverlay, startScreen } from './ui/mobile';
 import { QualityManager } from './render/quality';
 
+// offline cache / installable app (production builds only; dev uses Vite's HMR)
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch((e) => console.warn('SW registration failed', e));
+}
+
 const touchMode = isTouchDevice();
 if (touchMode) document.body.classList.add('kl-touch');
 lockViewport();
@@ -113,6 +118,13 @@ const pause = new PauseMenu(settings, {
   goZone: (id) => spawnAt(id),
   touch: touchMode,
   calibrateGyro: () => gyro.calibrate(),
+  requestGyro: () => {
+    if (gyro.live) return;
+    void gyro.request().then((ok) => {
+      applySettings();
+      toast(ok ? 'Giroscopio activado' : 'El giroscopio no está disponible: sigue con botones ◀ ▶', 2500);
+    });
+  },
   qualityLabel: () => ({ low: 'baja', medium: 'media', high: 'alta' })[quality.level],
   onClose: () => { paused = false; },
 });

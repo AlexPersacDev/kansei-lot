@@ -14,6 +14,7 @@ export interface PauseHooks {
   zones: () => { id: string; name: string }[];
   touch: boolean;
   calibrateGyro: () => void;
+  requestGyro: () => void;
   qualityLabel: () => string;
   goZone: (id: string) => void;
   onClose: () => void;
@@ -111,7 +112,10 @@ export class PauseMenu {
 
     if (h.touch) {
       section('Móvil');
-      select('Dirección', [['gyro', 'Giroscopio (inclinar)'], ['buttons', 'Botones ◀ ▶']], () => s.touchSteer, (v) => { s.touchSteer = v; });
+      select('Dirección', [['gyro', 'Giroscopio (inclinar)'], ['buttons', 'Botones ◀ ▶']], () => s.touchSteer, (v) => {
+        s.touchSteer = v;
+        if (v === 'gyro') h.requestGyro(); // inside the change gesture, so iOS can prompt again
+      });
       slider('Inclinación para bloqueo', 25, 90, 1, () => s.gyroLockDeg, (v) => { s.gyroLockDeg = v; }, (v) => `±${v}°`);
       slider('Zona muerta del giroscopio', 0, 10, 0.5, () => s.gyroDeadzone, (v) => { s.gyroDeadzone = v; }, (v) => `${v}°`);
       check('Invertir giroscopio', () => s.gyroInvert, (v) => { s.gyroInvert = v; });

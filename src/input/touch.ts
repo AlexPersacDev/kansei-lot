@@ -71,7 +71,8 @@ export class TouchDevice implements InputDevice {
     const u = Math.min(W, H);
     const safeL = 'max(10px, env(safe-area-inset-left))', safeR = 'max(10px, env(safe-area-inset-right))';
     const bottom = 'max(10px, env(safe-area-inset-bottom))';
-    const buttons = this.settings.touchSteer === 'buttons';
+    // buttons whenever the gyro isn't actually delivering data (denied, missing, not started)
+    const buttons = this.settings.touchSteer === 'buttons' || !this.gyro.live;
     const zoneW = Math.round(u * 0.3), zoneH = Math.round(H * 0.52);
     const hb = Math.round(u * 0.26), small = Math.round(u * 0.15), steer = Math.round(u * 0.25);
     const set = (c: Ctl, css: Partial<CSSStyleDeclaration>) => Object.assign(this.els.get(c)!.style, { left: '', right: '', top: '', bottom: '', ...css });
