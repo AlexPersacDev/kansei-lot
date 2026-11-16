@@ -1,6 +1,7 @@
 import type { Settings } from '../settings';
 import type { ButtonAction, InputDevice, InputFrame } from './actions';
 import type { GyroSteer } from './gyro';
+import { TOUCH_STEER } from './touch-tuning';
 
 type Ctl = 'gas' | 'brake' | 'hb' | 'left' | 'right' | 'up' | 'down';
 
@@ -121,10 +122,11 @@ export class TouchDevice implements InputDevice {
 
   private update(c: Ctl, e: PointerEvent): void {
     if (c === 'gas' || c === 'brake') {
-      // analog: touching low = 30 %, sliding the finger up = more
+      // FR Legends-style: a press is (almost) full pedal; only the bottom third of the zone
+      // modulates, from 55 % at the very bottom up to 100 %
       const r = this.els.get(c)!.getBoundingClientRect();
       const t = (r.bottom - e.clientY) / r.height;
-      this.setValue(c, Math.max(0.3, Math.min(1, 0.3 + 0.85 * t)));
+      this.setValue(c, Math.max(0.55, Math.min(1, 0.55 + 1.35 * t)));
     } else {
       this.setValue(c, 1);
     }
@@ -143,7 +145,8 @@ export class TouchDevice implements InputDevice {
       out.steer = this.gyro.steer(s.gyroLockDeg, s.gyroDeadzone, s.gyroInvert);
     } else {
       const target = this.values.right - this.values.left;
-      const rate = target === 0 ? 5 : Math.sign(target) !== Math.sign(this.steerBtn) && this.steerBtn !== 0 ? 8 : 3.2;
+      const rate = target === 0 ? TOUCH_STEER.ret
+        : Math.sign(target) !== Math.sign(this.steerBtn) && this.steerBtn !== 0 ? TOUCH_STEER.flip : TOUCH_STEER.rise;
       this.steerBtn = target > this.steerBtn ? Math.min(target, this.steerBtn + rate * dt) : Math.max(target, this.steerBtn - rate * dt);
       out.steer = this.steerBtn;
     }

@@ -20,6 +20,8 @@ export interface CarSetup {
   gripRear: number;
   brakeBias: number;     // front fraction
   assist: number;        // auto-countersteer 0..1
+  driftAssist: number;   // arcade angle/speed hold 0..1 (FR Legends-style)
+  steerAtSpeed: number;  // fraction of the driver's lock still available above ~50 km/h (1 = none removed)
   autoGearbox: boolean;
   autoClutch: boolean;   // anti-stall / launch clutch (on unless the player uses a clutch pedal)
 }
@@ -34,6 +36,8 @@ export function defaultSetup(spec: CarSpec): CarSetup {
     gripRear: 1,
     brakeBias: spec.brakes.frontBias,
     assist: 0.6,
+    driftAssist: 0,
+    steerAtSpeed: 1,
     autoGearbox: true,
     autoClutch: true,
   };
@@ -66,6 +70,16 @@ const smoothstep = (a: number, b: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 const RPM = 60 / (2 * Math.PI);
+
+/** Arcade drift assist tuning (see Car.step). Angles in rad. */
+export const DRIFT_ASSIST = {
+  minAngle: 0.21,      // ~12°: below this the assist stays out of the way
+  maxAngle: 0.75,      // ~43°: angle the assist settles towards when you let go
+  angleGain: 12,       // rad/s² of yaw per rad beyond maxAngle
+  slipDamping: 2.0,    // 1/s, yaw opposing fast changes of the slip angle
+  boost: 2.4,          // m/s² along the velocity at full throttle
+  boostUpTo: 14,       // m/s: no push above ~50 km/h
+};
 
 /**
  * Planar rigid-body car (x, z, yaw) with four independently spinning wheels,
@@ -132,6 +146,7 @@ export class Car {
     for (const w of this.wheels) { w.omega = 0; w.slip = 0; w.slideSpeed = 0; }
     this.engineOmega = this.spec.engine.idleRpm / RPM;
     this.gear = 1; this.shiftTimer = 0; this.pendingGear = null;
+    this.prevDriftAngle = 0;
   }
 
   /** Request a gear change. Manual: immediate request; returns false if refused. */
@@ -193,7 +208,10 @@ export class Car {
     // the front axle's own direction of travel (zero front slip), like strong caster: hands off,
     // the fronts follow the slide and the player only adds or removes angle around that.
     const maxSteer = set.maxSteerAngle;
-    let delta = -ctl.steer * maxSteer;
+    // digital inputs (buttons/keys) get less authority at speed, as in arcade drift games;
+    // a real wheel uses steerAtSpeed = 1 (no reduction)
+    const authority = 1 - (1 - set.steerAtSpeed) * smoothstep(3, 14, this.speed);
+    let delta = -ctl.steer * maxSteer * authority;
     if (set.assist > 0 && u > 0) {
       const fade = smoothstep(2, 6, this.speed);
       const aFront = this.wheels[0].pz;
@@ -368,6 +386,28 @@ export class Car {
     this.vx += ax * dt;
     this.vz += az * dt;
     this.yawRate += (tq / spec.yawInertia) * dt;
+
+    // ---- arcade drift assist (FR Legends-style), scaled by setup.driftAssist 0..1:
+    //  1) angle limit: past DRIFT_ASSIST.maxAngle the nose is turned back toward the travel direction,
+    //     so holding throttle doesn't end in a spin;
+    //  2) slip-rate damping: the angle changes smoothly instead of snapping;
+    //  3) speed hold: with throttle in a slide, a push along the velocity offsets the scrub.
+    const beta = this.driftAngle;
+    const betaRate = (beta - this.prevDriftAngle) / dt;
+    this.prevDriftAngle = beta;
+    const da = set.driftAssist;
+    if (da > 0 && u > 1.5 && this.speed > 4) {
+      const D = DRIFT_ASSIST;
+      const ab = Math.abs(beta);
+      // β > 0 = velocity left of the nose → a positive (leftward) yaw brings the nose back
+      if (ab > D.maxAngle) this.yawRate += da * Math.sign(beta) * D.angleGain * (ab - D.maxAngle) * dt;
+      if (ab > D.minAngle) this.yawRate += da * D.slipDamping * clamp(betaRate, -3, 3) * dt;
+      if (ab > D.minAngle && throttle > 0.2 && this.speed < D.boostUpTo) {
+        const push = da * D.boost * throttle * smoothstep(D.minAngle, D.minAngle + 0.2, ab) * dt;
+        this.vx += (this.vx / this.speed) * push;
+        this.vz += (this.vz / this.speed) * push;
+      }
+    }
     this.yaw += this.yawRate * dt;
     this.x += this.vx * dt;
     this.z += this.vz * dt;
@@ -383,6 +423,7 @@ export class Car {
   }
 
   clutchTorque = 0;
+  private prevDriftAngle = 0;
 
   private updateGearbox(dt: number, ctl: CarControls, u: number): void {
     if (this.shiftTimer > 0) {

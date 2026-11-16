@@ -23,10 +23,10 @@ Prototipo de drift en el navegador al estilo FR Legends: un BMW 316i E30 coupé 
 2. Menú ⋮ → **Instalar app** (o **Añadir a pantalla de inicio**).
 3. Ábrela desde el icono, en horizontal, y toca para empezar.
 
-### Conducir en el móvil
-- **Dirección:** inclina el móvil como un volante (±60° = tope). El botón **◎** recentra.
-- **GAS** (derecha) y **FRENO** (izquierda) son analógicos: cuanto más arriba pongas el dedo en la zona, más fuerte.
-- **FRENO DE MANO:** el botón redondo grande.
+### Conducir en el móvil (estilo FR Legends)
+- **Dirección:** botones **◀ ▶** a la izquierda. Si prefieres inclinar el móvil como un volante: Pausa → Móvil → Dirección → Giroscopio (±60° = tope, **◎** recentra).
+- **GAS**, **FRENO** y **FRENO DE MANO** a la derecha. Pulsar es casi pedal a fondo; solo la parte baja de la zona dosifica.
+- **Ayuda al derrape (100 % en móvil):** entra con freno de mano + ◀ o ▶ y **mantén el gas**: el coche sujeta solo unos 45° y la velocidad, y el contravolante es automático. Los botones ajustan el ángulo: hacia dentro de la curva, más ángulo; hacia fuera, menos o cambio de lado. Se regula en Pausa (0 % = física pura).
 - Caja automática por defecto (en Pausa puedes poner botones + / −). Mantén el freno parado para marcha atrás.
 - Arriba: pausa ❚❚, ayuda ?, cámara 📷, recolocar ↺.
 

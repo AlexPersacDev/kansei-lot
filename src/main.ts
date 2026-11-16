@@ -12,7 +12,7 @@ import { PauseMenu } from './ui/pause';
 import { openRemap } from './ui/remap';
 import { injectStyles, toast } from './ui/styles';
 import { FAMILY_TITLE } from './ui/glyphs';
-import { loadSettings, saveSettings, type Tuning } from './settings';
+import { loadSettings, saveSettings, STEER_AT_SPEED, type Tuning } from './settings';
 import { DriftScoring } from './game/scoring';
 import { Hud } from './hud/hud';
 import { TireSmoke } from './render/smoke';
@@ -140,6 +140,8 @@ function applySettings(): void {
   su.gripRear = t.gripRear;
   su.brakeBias = t.brakeBias;
   su.assist = settings.assist[input.active.kind];
+  su.driftAssist = settings.driftAssist[input.active.kind];
+  su.steerAtSpeed = STEER_AT_SPEED[input.active.kind];
   su.autoGearbox = settings.gearbox === 'auto';
   input.keyboard.mouseSteer = settings.mouseSteer;
   help.visible = settings.showHelp;
@@ -174,7 +176,7 @@ function startRemap(p: PadDevice): void {
 
 input.onActiveChange = (d) => {
   applySettings();
-  toast(`${FAMILY_TITLE[d.family]} · autocontravolante ${Math.round(settings.assist[d.kind] * 100)} %`, 1800);
+  toast(`${FAMILY_TITLE[d.family]} · contravolante ${Math.round(settings.assist[d.kind] * 100)} % · ayuda al derrape ${Math.round(settings.driftAssist[d.kind] * 100)} %`, 1800);
 };
 input.onNeedsMapping = (p) => {
   toast(p.kind === 'wheel' ? 'Volante detectado: asigna los controles' : 'Mando sin mapeo estándar: asigna los controles');

@@ -21,7 +21,9 @@ export interface Tuning {
 }
 
 export interface Settings {
+  schema: number;
   assist: Record<DeviceKind, number>;  // auto-countersteer 0..1 per device kind
+  driftAssist: Record<DeviceKind, number>; // FR Legends-style angle/speed hold 0..1 per device kind
   deadzone: number;
   steerCurve: number;                  // gamepad stick response exponent
   mouseSteer: boolean;
@@ -44,10 +46,16 @@ export interface Settings {
 }
 
 const KEY = 'kl.settings.v1';
+const SCHEMA = 2;
+
+/** Digital controls lose steering authority at speed (arcade feel); wheels and sticks less or none. */
+export const STEER_AT_SPEED: Record<DeviceKind, number> = { wheel: 1, gamepad: 0.6, keyboard: 0.3, touch: 0.3 };
 
 export function defaultSettings(): Settings {
   return {
+    schema: SCHEMA,
     assist: { wheel: 0, gamepad: 0.6, keyboard: 0.6, touch: 0.7 },
+    driftAssist: { wheel: 0, gamepad: 0.7, keyboard: 0.85, touch: 1 },
     deadzone: 0.08,
     steerCurve: 1.25,
     mouseSteer: false,
@@ -59,7 +67,7 @@ export function defaultSettings(): Settings {
     volume: 0.7,
     showHelp: true,
     showTelemetry: false,
-    touchSteer: 'gyro',
+    touchSteer: 'buttons', // FR Legends-style ◀ ▶ by default; gyro selectable in Pausa
     gyroLockDeg: 60,
     gyroDeadzone: 2,
     gyroInvert: false,
@@ -76,7 +84,14 @@ export function loadSettings(): Settings {
     const raw = localStorage.getItem(KEY);
     if (!raw) return d;
     const s = JSON.parse(raw) as Partial<Settings>;
-    return { ...d, ...s, assist: { ...d.assist, ...(s.assist ?? {}) }, bindings: s.bindings ?? {} };
+    // schema 1 → 2: the phone switched to FR Legends-style buttons as default steering
+    if ((s.schema ?? 1) < 2) s.touchSteer = 'buttons';
+    return {
+      ...d, ...s, schema: SCHEMA,
+      assist: { ...d.assist, ...(s.assist ?? {}) },
+      driftAssist: { ...d.driftAssist, ...(s.driftAssist ?? {}) },
+      bindings: s.bindings ?? {},
+    };
   } catch {
     return d;
   }

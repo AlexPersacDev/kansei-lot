@@ -107,6 +107,13 @@ export class PauseMenu {
 
     section('Conducción');
     slider(`Autocontravolante (${KIND_NAME[kind]})`, 0, 1, 0.05, () => s.assist[kind], (v) => { s.assist[kind] = v; }, pct);
+    slider(`Ayuda al derrape, estilo FR Legends (${KIND_NAME[kind]})`, 0, 1, 0.05, () => s.driftAssist[kind], (v) => { s.driftAssist[kind] = v; }, pct);
+    {
+      const n = document.createElement('div');
+      n.className = 'kl-note';
+      n.textContent = 'Sujeta el ángulo (~45°) y la velocidad aunque sueltes la dirección, y evita el trompo. 0 % = física pura.';
+      menu.appendChild(n);
+    }
     select('Caja de cambios', [['auto', 'Automática'], ['manual', 'Manual']], () => s.gearbox, (v) => { s.gearbox = v; });
     check('Palanca H exige embrague', () => s.hRequiresClutch, (v) => { s.hRequiresClutch = v; });
 
